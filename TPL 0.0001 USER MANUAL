@@ -1,0 +1,52 @@
+
+# TATOR PROGRAMMING LANGUAGE (TPL) v0.1
+## THE ZERO-DEPENDENCY BARE-METAL ENGINE
+
+TPL is a self-modifying programming language written entirely in Bash 4.4.9. 
+It requires zero external dependencies, no package managers, and no internet connection. 
+It is designed to harness C-level memory access and pure framebuffer rendering to bypass the 
+desktop environment (X11/Wayland), allowing you to control your machine at a lower, bare-metal level.
+
+## 1. GETTING STARTED
+
+TPL is a single script, meaning there is nothing to install. To begin, download the `tpl` file and make it executable by typing `chmod +x tpl` in your terminal. You can run it in interactive mode by typing `./tpl`, which will present you with a `>` prompt. Alternatively, you can run a saved script by typing `./tpl myscript.tpl`. 
+
+The language operates in two modes. When you run `./tpl` with no arguments, it enters REPL Mode, allowing you to type commands line by line. When you run `./tpl filename.tpl`, it enters Script Mode, where TPL reads the entire file in one syscall and executes it at C-level speed. You can also place `#!/path/to/tpl` at the top of a file, make it executable, and run it like a native binary.
+
+## 2. CORE COMMANDS
+
+The `eko` and `echo` commands print text to standard output and automatically expand variables. For example, if you type `set name = Alice` and then `eko Hello, $name!`, the screen will print `Hello, Alice!`. 
+
+The `set` command assigns a value to a global variable. Variables are stored globally in an associative array and can be recalled at any time by typing `eko $age`.
+
+The `input` command reads from standard input. You can optionally include a custom prompt in quotes. For example, typing `input "Enter your name: " username` will display the prompt and wait for the user to type before saving the string to the variable.
+
+The `math` command evaluates integer arithmetic using standard C-style operators like addition, subtraction, multiplication, division, and modulo. For example, `math (5 * 10) + 2` will output `52`. Note that TPL uses pure Bash integer math, so floats are not natively supported.
+
+## 3. LOGIC AND CONTROL FLOW
+
+TPL features a highly optimized, zero-indentation `if` statement. It can evaluate math, strings, files, and run multiple commands on a single line using semicolons. The syntax is `if <condition> then <command> [else <command>]`. 
+
+For math, you can type `if 10 -gt 5 then eko "Yes" else eko "No"`. For strings, you can type `if $name == "Alice" then eko "Admin" else eko "Guest"`. To run multiple commands without any indentation, you separate them with semicolons like this: `if 1 == 1 then eko "One"; eko "Two"; eko "Three"`.
+
+## 4. METAPROGRAMMING (RUNTIME EXTENSION)
+
+TPL is self-modifying, meaning you can create and edit new commands in memory while the program is running. The `def` command creates a new command at runtime. The body of the command is written in raw Bash. For example, typing `def greet eko "Welcome to the system, $1"` creates a new command called `greet` which you can run immediately.
+
+The `edit` command modifies an existing command interactively, allowing you to rewrite its source code in memory. The `run` command loads and executes other TPL scripts, while the `sh` command runs standard Bash scripts. Both commands share the current variable state, allowing different scripts to communicate with each other.
+
+## 5. FRAMEBUFFER GRAPHICS (FB)
+
+The `fb` command bypasses the OS desktop entirely and writes raw 32-bit binary pixels directly to `/dev/fb0` (Video RAM). You must be logged into a raw TTY by pressing `Ctrl+Alt+F3` and run TPL as `root` or with `video` group permissions.
+
+The `fb init` command clears the terminal, hides the blinking cursor, and moves the text prompt to the bottom of the screen so it does not overwrite your graphics. The `fb clear <R> <G> <B>` command fills the entire screen with a solid color using RGB values from 0 to 255. The `fb rect <X> <Y> <Width> <Height> <R> <G> <B>` command draws a solid rectangle. The `fb pixel <X> <Y> <R> <G> <B>` command draws a single pixel, and you can omit the word "pixel" for shorthand.
+
+If TPL cannot auto-detect your screen size from the kernel, you can set it manually before drawing by using the `set` command to define `FB_WIDTH`, `FB_HEIGHT`, `FB_BPP`, and `FB_STRIDE`.
+
+## 6. ARCHITECTURE AND TECHNICAL SPECS
+
+TPL was built on an eMachines PC running Linux Mint 19 with an 18 kbps internet connection. The lexer and parser use `LC_ALL=C` byte-slicing and O(1) pointer arithmetic without spawning subshells. The loader reads the entire script in a single system call, bypassing line-by-line read overhead. The router uses Bash reflection for O(1) command dispatch. The state uses an associative array with variable synchronization for string expansion.
+
+## 7. SYSTEM CONSTRAINTS AND WARNINGS
+
+TPL uses unsanitized execution, meaning you should never run untrusted `.tpl` scripts with root privileges. Drawing pixels outside your screen resolution will write to unmapped VRAM, which can cause kernel panics or display lockups. If your script crashes after running `fb init`, your cursor will remain hidden, and you will need to type `reset` blindly and press Enter to fix your terminal. All math is integer-based, so floats are not supported.
